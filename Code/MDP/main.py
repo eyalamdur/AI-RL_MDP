@@ -30,6 +30,8 @@ def example_driver():
     print("\nFinal utility:")
     U_new = value_iteration(mdp, U)
     mdp.print_utility(U_new)
+    
+    return
     print("\nFinal policy:")
     policy = get_policy(mdp, U_new)
     mdp.print_policy(policy)
@@ -73,4 +75,4 @@ def mc_example_driver():
 if __name__ == '__main__':
     # run our example
     example_driver()
-    mc_example_driver()
+    #mc_example_driver()
