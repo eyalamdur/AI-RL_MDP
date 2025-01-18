@@ -39,10 +39,10 @@ def get_policy(mdp, U):
     # return: the policy
     #
 
-    # TODO:
     # ====== YOUR CODE: ====== 
-# Initialize the policy array
-    policy = np.empty((mdp.num_row, mdp.num_col), dtype=Action)  # Assuming actions are objects/entities
+    
+    # Initialize the policy array
+    policy = np.empty((mdp.num_row, mdp.num_col), dtype=Action)
     rows, cols = mdp.num_row, mdp.num_col
     
     # Loop through each state in the MDP
@@ -102,7 +102,7 @@ def mc_algorithm(
 
 
 # --------------------- Helper functions --------------------- #
-def get_action_expected_utility(mdp, state, action, U):
+def get_action_expected_utility(mdp: MDP, state: Tuple[int, int], action: Action, U):
     # Given an MDP, a state, an action, and the utility of each state - U
     # return the expected utility of the given action in the given state
     #
@@ -120,7 +120,7 @@ def get_action_expected_utility(mdp, state, action, U):
 
     return action_value
 
-def belman_calculation(mdp, state, U):
+def belman_calculation(mdp: MDP, state: Tuple[int, int], U):
     # Given an MDP, a state, and the utility of each state - U
     # return the Belman equation calculation for the given state and action
     #

@@ -35,6 +35,7 @@ def example_driver():
     policy = get_policy(mdp, U_new)
     mdp.print_policy(policy)
 
+    # Change return if you want to test policy iteration
     return
     print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
     print("@@@@@@@@@ Policy iteration @@@@@@@@")
