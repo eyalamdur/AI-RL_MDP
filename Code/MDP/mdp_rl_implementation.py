@@ -12,23 +12,23 @@ def value_iteration(mdp, U_init, epsilon=10 ** (-3)):
     #
 
     # ====== YOUR CODE: ======
-    U_final = np.array(U_init)
-    delta = 0
-    rows, cols = mdp.num_row, mdp.num_col
     
-    while delta < epsilon * (1 - mdp.gamma) / mdp.gamma:
-        U_current = np.copy(U_final)
-        
+    # Initialize the utility matrix (with type float64)
+    U_current = np.array(U_init, dtype=np.float64)
+    rows, cols = mdp.num_row, mdp.num_col
+    delta = float('inf')
+    
+    while delta > epsilon * (1 - mdp.gamma) / mdp.gamma:
+        delta = 0
+        U_final = np.copy(U_current)
+
         # Update the utility of each state
         for row in range(rows):
             for col in range(cols):
-                print(belman_calculation(mdp, (row, col), U_current))
-                U_final[row,col] = belman_calculation(mdp, (row, col), U_current)
-        print(U_final)
+                U_current[row,col] = belman_calculation(mdp, (row, col), U_final)
+
         # Update delta
-        max_diff = np.max(np.abs(U_final- U_current))
-        if max_diff > delta:
-            delta = max_diff
+        delta = max(np.max(np.abs(U_final- U_current), delta))
     # ========================
     return U_final
 
@@ -99,16 +99,19 @@ def belman_calculation(mdp, state, U_final):
     # return the Belman equation calculation for the given state and action
     #
     
-    # Initialize the max action value (-inf)
+    # Terminal states have constant utility
+    if state in mdp.terminal_states:
+        return float(mdp.get_reward(state))
+    
+    # Iterate through available actions and calculate the action value
     max_action_value = float('-inf') 
-
-    for action in mdp.actions:  # Iterate through available actions
+    for action in mdp.actions: 
         action_value = 0
 
         # Get the transition probabilities for the action
         transition_probs = mdp.transition_function[action]
         
-        # Iterate through next states and their actions transition probabilities and calculate expected utility for this action
+        # Iterate through the transition probabilities and calculate expected utility for current action
         for action_index, probability in enumerate(transition_probs):
             action_by_index = str(list(Action)[action_index])
             next_state = mdp.step(state, action_by_index)
