@@ -74,7 +74,7 @@ def policy_evaluation(mdp, policy):
                 action = policy[row, col]
                 reward = mdp.get_reward((row, col))
                 U[row, col] = reward + gamma * sum(mdp.transition_function((next_row, next_col), (row, col), action) * U[next_row, next_col]
-                                                for next_row in range(rows) for next_col in range(cols))
+                                                   for next_row in range(rows) for next_col in range(cols))
                 delta = max(delta, abs(temp - U[row, col]))
         if delta < theta:
             break
@@ -90,10 +90,22 @@ def policy_iteration(mdp, policy_init):
     optimal_policy = None
     # TODO:
     # ====== YOUR CODE: ======
-
+    rows, cols = mdp.num_row, mdp.num_col
+    U = np.zeros((rows, cols))
+    optimal_policy = policy_init
+    while True:
+        U = policy_evaluation(mdp, optimal_policy)
+        isChanged = False
+        for row in range(rows):
+            for col in range(cols):
+                state = (row, col)
+                if exists_better_policy(mdp, optimal_policy, U, state):
+                    optimal_policy[row, col] = get_best_action(mdp, state, mdp.actions, U)
+                    isChanged = True
+        if not isChanged:
+            break
     # ========================
     return optimal_policy
-
 
 def mc_algorithm(
         sim,
@@ -138,7 +150,7 @@ def get_action_expected_utility(mdp: MDP, state: Tuple[int, int], action: Action
 
 def belman_calculation(mdp: MDP, state: Tuple[int, int], U):
     # Given an MDP, a state, and the utility of each state - U
-    # return the Belman equation calculation for the given state and action
+    # return the Bellman equation calculation for the given state and action
     #
     
     # Terminal states have constant utility
@@ -182,3 +194,12 @@ def get_best_action(mdp: MDP, state: Tuple[int, int], action_list: List[Tuple[Ac
             best_action = action
         
     return best_action
+
+def exists_better_policy(mdp: MDP, policy, U, state: Tuple[int, int]) -> bool:
+    # Given a mdp, a policy, a utility array and a state,
+    # return true if there is a better policy to the given
+    # state and False otherwise
+    best_action = get_best_action(mdp, state, mdp.actions, U)
+    best_value = get_action_expected_utility(mdp, state, best_action, U)
+    policy_value = get_action_expected_utility(mdp, state, policy[state], U)
+    return best_value > policy_value
