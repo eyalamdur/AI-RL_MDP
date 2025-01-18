@@ -30,6 +30,7 @@ def value_iteration(mdp, U_init, epsilon=10 ** (-3)):
         # Update delta
         delta = max(np.max(np.abs(U_final- U_current), delta))
     # ========================
+    
     return U_final
 
 
@@ -38,10 +39,17 @@ def get_policy(mdp, U):
     # return: the policy
     #
 
-    policy = None
     # TODO:
     # ====== YOUR CODE: ====== 
-
+# Initialize the policy array
+    policy = np.empty((mdp.num_row, mdp.num_col), dtype=Action)  # Assuming actions are objects/entities
+    rows, cols = mdp.num_row, mdp.num_col
+    
+    # Loop through each state in the MDP
+    for row in range(rows):
+        for col in range(cols):       
+            policy[row, col] = get_best_action(mdp, (row, col), mdp.actions, U)
+            
     # ========================
     return policy
 
@@ -94,8 +102,26 @@ def mc_algorithm(
 
 
 # --------------------- Helper functions --------------------- #
-def belman_calculation(mdp, state, U_final):
-    # Given an MDP, a state, and the last utility of each state - U_final
+def get_action_expected_utility(mdp, state, action, U):
+    # Given an MDP, a state, an action, and the utility of each state - U
+    # return the expected utility of the given action in the given state
+    #
+    
+    # Get the transition probabilities for the action
+    transition_probs = mdp.transition_function[action]
+    action_value = 0
+    # Iterate through the transition probabilities and calculate expected utility for current action
+    for action_index, probability in enumerate(transition_probs):
+        action_by_index = str(list(Action)[action_index])
+        next_state = mdp.step(state, action_by_index)
+
+        # Add to the action value, weighted by probability
+        action_value += probability * U[next_state] 
+
+    return action_value
+
+def belman_calculation(mdp, state, U):
+    # Given an MDP, a state, and the utility of each state - U
     # return the Belman equation calculation for the given state and action
     #
     
@@ -106,18 +132,7 @@ def belman_calculation(mdp, state, U_final):
     # Iterate through available actions and calculate the action value
     max_action_value = float('-inf') 
     for action in mdp.actions: 
-        action_value = 0
-
-        # Get the transition probabilities for the action
-        transition_probs = mdp.transition_function[action]
-        
-        # Iterate through the transition probabilities and calculate expected utility for current action
-        for action_index, probability in enumerate(transition_probs):
-            action_by_index = str(list(Action)[action_index])
-            next_state = mdp.step(state, action_by_index)
-
-            # Add to the action value, weighted by probability
-            action_value += probability * U_final[next_state[0]][next_state[1]] 
+        action_value = get_action_expected_utility(mdp, state, action, U)
 
         # Update max_action_value if needed
         max_action_value = max(max_action_value, action_value)
@@ -127,3 +142,27 @@ def belman_calculation(mdp, state, U_final):
     
     # Return the calculated value based on the Bellman equation
     return reward + mdp.gamma * max_action_value
+
+def get_best_action(mdp: MDP, state: Tuple[int, int], action_list: List[Tuple[Action, float]], U) -> Action:
+    # Given an MDP, a state, a list of possible actions, and the utility of each state - U
+    # return the best action for the given state
+    # 
+    
+    # Check if the state is a terminal state or a wall
+    if state in mdp.terminal_states:
+        return mdp.get_reward(state)
+    elif mdp.get_reward(state) == "WALL":
+        return "WALL"
+    
+    best_action = None
+    best_value = float('-inf')  
+    
+    for action in action_list:  # Assume mdp has an 'actions' attribute with possible actions
+        value = get_action_expected_utility(mdp, state, action, U)
+        
+        # Check if this action is the best so far
+        if value > best_value:
+            best_value = value
+            best_action = action
+        
+    return best_action

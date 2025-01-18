@@ -31,11 +31,11 @@ def example_driver():
     U_new = value_iteration(mdp, U)
     mdp.print_utility(U_new)
     
-    return
     print("\nFinal policy:")
     policy = get_policy(mdp, U_new)
     mdp.print_policy(policy)
 
+    return
     print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
     print("@@@@@@@@@ Policy iteration @@@@@@@@")
     print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
