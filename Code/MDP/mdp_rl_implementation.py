@@ -59,10 +59,26 @@ def policy_evaluation(mdp, policy):
     # return: the utility U(s) of each state s
     #
     U = None
-    # TODO:
     # ====== YOUR CODE: ======
-
-    # ========================
+    gamma = mdp.gamma
+    # TODO: threshold isn't defined in the lectures, need to understand
+    theta = 10 ** (-4)
+    rows, cols = mdp.num_row, mdp.num_col
+    U = np.zeros((rows, cols))
+    # ensuring the Bellman equation for each state according to the existing U until delta < threshold
+    while True:
+        delta = 0
+        for row in range(rows):
+            for col in range(cols):
+                temp = U[row, col]
+                action = policy[row, col]
+                reward = mdp.get_reward((row, col))
+                U[row, col] = reward + gamma * sum(mdp.transition_function((next_row, next_col), (row, col), action) * U[next_row, next_col]
+                                                for next_row in range(rows) for next_col in range(cols))
+                delta = max(delta, abs(temp - U[row, col]))
+        if delta < theta:
+            break
+        # ========================
     return U
 
 
