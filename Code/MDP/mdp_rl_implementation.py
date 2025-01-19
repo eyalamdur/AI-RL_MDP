@@ -25,7 +25,8 @@ def value_iteration(mdp, U_init, epsilon=10 ** (-3)):
         # Update the utility of each state
         for row in range(rows):
             for col in range(cols):
-                U_current[row,col] = belman_calculation(mdp, (row, col), U_final)
+                if valid_state(mdp, (row, col)):
+                    U_current[row,col] = belman_calculation(mdp, (row, col), U_final)
 
         # Update delta
         delta = max(np.max(np.abs(U_final- U_current), delta))
@@ -58,13 +59,15 @@ def policy_evaluation(mdp, policy):
     # Given the mdp, and a policy
     # return: the utility U(s) of each state s
     #
+    
     U = None
     # ====== YOUR CODE: ======
     gamma = mdp.gamma
     rows, cols, num_of_states = mdp.num_row, mdp.num_col, mdp.num_row*mdp.num_col
-    R = [mdp.get_reward(s) for s in range(num_of_states)]
+    R = [float(mdp.get_reward(s)) for s in range(num_of_states)]          # State is (row, col) need to convert the index (maybe state dictionary?)
     P = np.zeros((num_of_states, num_of_states))
     I = np.ones((num_of_states, num_of_states))
+    
     # calculate all the probabilities for P(s'|s,pi(a))
     for state_row in range(rows):
         for state_col in range(cols):
@@ -73,15 +76,17 @@ def policy_evaluation(mdp, policy):
             for next_state_row in range(rows):
                 for (next_state_col) in range(cols):
                     next_state = next_state_row * cols + next_state_col
-                    P[state, next_state] = mdp.transition_function[action, next_state, state]
+                    P[state, next_state] = get_state_probabilty(mdp, state, action, next_state) # mdp.transition_function[action, next_state, state] # 
+                    
     # solving the linear equation U = R - gamma * P * U => (I - gamma * P) * U = R [like Ax=b]
     V = np.linalg.solve(I - gamma * P, R)
+    
     # returning from vector size |states| to matrix size rows * cols
     U = np.zeros((rows, cols))
     for row in range(rows):
         for col in range(cols):
             state = row * cols + col
-            U[row, col] = V[state]
+            U[row, col] = V[state]          
 
     # gamma = mdp.gamma
     # # TODO: threshold isn't defined in the lectures, need to understand
@@ -112,8 +117,7 @@ def policy_iteration(mdp, policy_init):
     # run the policy iteration algorithm
     # return: the optimal policy
     #
-    optimal_policy = None
-    # TODO:
+
     # ====== YOUR CODE: ======
     rows, cols = mdp.num_row, mdp.num_col
     U = np.zeros((rows, cols))
@@ -131,6 +135,7 @@ def policy_iteration(mdp, policy_init):
             break
     # ========================
     return optimal_policy
+
 
 def mc_algorithm(
         sim,
@@ -163,6 +168,7 @@ def get_action_expected_utility(mdp: MDP, state: Tuple[int, int], action: Action
     # Get the transition probabilities for the action
     transition_probs = mdp.transition_function[action]
     action_value = 0
+    
     # Iterate through the transition probabilities and calculate expected utility for current action
     for action_index, probability in enumerate(transition_probs):
         action_by_index = str(list(Action)[action_index])
@@ -178,9 +184,12 @@ def belman_calculation(mdp: MDP, state: Tuple[int, int], U):
     # return the Bellman equation calculation for the given state and action
     #
     
+    # Get the reward of the current state
+    reward = float(mdp.get_reward(state))  
+    
     # Terminal states have constant utility
     if state in mdp.terminal_states:
-        return float(mdp.get_reward(state))
+        return reward
     
     # Iterate through available actions and calculate the action value
     max_action_value = float('-inf') 
@@ -190,8 +199,7 @@ def belman_calculation(mdp: MDP, state: Tuple[int, int], U):
         # Update max_action_value if needed
         max_action_value = max(max_action_value, action_value)
 
-    # Get the reward of the current state
-    reward = float(mdp.get_reward(state)) if mdp.get_reward(state) != "WALL" else 0    
+
     
     # Return the calculated value based on the Bellman equation
     return reward + mdp.gamma * max_action_value
@@ -210,7 +218,7 @@ def get_best_action(mdp: MDP, state: Tuple[int, int], action_list: List[Tuple[Ac
     best_action = None
     best_value = float('-inf')  
     
-    for action in action_list:  # Assume mdp has an 'actions' attribute with possible actions
+    for action in action_list:  
         value = get_action_expected_utility(mdp, state, action, U)
         
         # Check if this action is the best so far
@@ -228,3 +236,22 @@ def exists_better_policy(mdp: MDP, policy, U, state: Tuple[int, int]) -> bool:
     best_value = get_action_expected_utility(mdp, state, best_action, U)
     policy_value = get_action_expected_utility(mdp, state, policy[state], U)
     return best_value > policy_value
+
+def valid_state(mdp: MDP, state: Tuple[int, int] ) -> bool:
+    return not mdp.get_reward(state) == "WALL"
+
+def get_state_probabilty(mdp: MDP, state: Tuple[int, int], action: Action, next_state: Tuple[int, int]) -> float:
+    # Given an MDP, a state, an action, and the next state
+    # return the probability of the given action in the given state to reach the next state
+    #
+    
+    # Get the transition probabilities for the action
+    transition_probs = mdp.transition_function[action]
+    
+    # Iterate through the transition probabilities and return the probability for the next state
+    for action_index, probability in enumerate(transition_probs):
+        action_by_index = str(list(Action)[action_index])
+        if next_state == mdp.step(state, action_by_index):
+            return probability 
+
+    return 0
