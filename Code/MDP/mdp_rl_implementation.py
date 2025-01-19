@@ -61,24 +61,49 @@ def policy_evaluation(mdp, policy):
     U = None
     # ====== YOUR CODE: ======
     gamma = mdp.gamma
-    # TODO: threshold isn't defined in the lectures, need to understand
-    theta = 10 ** (-4)
-    rows, cols = mdp.num_row, mdp.num_col
+    rows, cols, num_of_states = mdp.num_row, mdp.num_col, mdp.num_row*mdp.num_col
+    R = [mdp.get_reward(s) for s in range(num_of_states)]
+    P = np.zeros((num_of_states, num_of_states))
+    I = np.ones((num_of_states, num_of_states))
+    # calculate all the probabilities for P(s'|s,pi(a))
+    for state_row in range(rows):
+        for state_col in range(cols):
+            state = state_row * cols + state_col
+            action = policy[state_row, state_col]
+            for next_state_row in range(rows):
+                for (next_state_col) in range(cols):
+                    next_state = next_state_row * cols + next_state_col
+                    P[state, next_state] = mdp.transition_function[action, next_state, state]
+    # solving the linear equation U = R - gamma * P * U => (I - gamma * P) * U = R [like Ax=b]
+    V = np.linalg.solve(I - gamma * P, R)
+    # returning from vector size |states| to matrix size rows * cols
     U = np.zeros((rows, cols))
-    # ensuring the Bellman equation for each state according to the existing U until delta < threshold
-    while True:
-        delta = 0
-        for row in range(rows):
-            for col in range(cols):
-                temp = U[row, col]
-                action = policy[row, col]
-                reward = mdp.get_reward((row, col))
-                U[row, col] = reward + gamma * sum(mdp.transition_function((next_row, next_col), (row, col), action) * U[next_row, next_col]
-                                                   for next_row in range(rows) for next_col in range(cols))
-                delta = max(delta, abs(temp - U[row, col]))
-        if delta < theta:
-            break
-        # ========================
+    for row in range(rows):
+        for col in range(cols):
+            state = row * cols + col
+            U[row, col] = V[state]
+
+    # gamma = mdp.gamma
+    # # TODO: threshold isn't defined in the lectures, need to understand
+    # theta = 10 ** (-4)
+    # rows, cols = mdp.num_row, mdp.num_col
+    # U = np.zeros((rows, cols))
+    # # ensuring the Bellman equation for each state according to the existing U until delta < threshold
+    # while True:
+    #     delta = 0
+    #     for row in range(rows):
+    #         for col in range(cols):
+    #             temp = U[row, col]
+    #             action = policy[row, col]
+    #             reward = mdp.get_reward((row, col))
+    #             U[row, col] = reward + gamma * get_action_expected_utility(mdp, (row, col), action, U)
+    #             # U[row, col] = reward + gamma *
+    #             # sum(mdp.transition_function((next_row, next_col), (row, col), action) * U[next_row, next_col]
+    #             # for next_row in range(rows) for next_col in range(cols))
+    #             delta = max(delta, abs(temp - U[row, col]))
+    #     if delta < theta:
+    #         break
+    # ========================
     return U
 
 
