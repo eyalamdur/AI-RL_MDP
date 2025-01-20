@@ -76,7 +76,7 @@ def policy_evaluation(mdp, policy):
                     P[state, next_state] = mdp.transition_function[action, next_state, state]
     # solving the linear equation U = R - gamma * P * U => (I - gamma * P) * U = R [like Ax=b]
     V = np.linalg.solve(I - gamma * P, R)
-    # returning from vector size |states| to matrix size rows * cols
+    # returning from vector size num_of_states to matrix size rows * cols
     U = np.zeros((rows, cols))
     for row in range(rows):
         for col in range(cols):
