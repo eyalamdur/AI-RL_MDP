@@ -96,14 +96,16 @@ def policy_evaluation(mdp, policy):
 
     # solving the linear equation U = R - gamma * P * U => (I - gamma * P) * U = R [like Ax=b]
     V = np.zeros(num_of_states)
-    # print("V: ", V)
     # print("R: ", R)
-    # print("P: ", P)
+    # print("P: ")
+    # print(P)
+    # W = np.linalg.inv(I - gamma * P)
+    # W = W.dot(R)
     V = np.linalg.solve(I - gamma * P, R)
     # returning from vector size num_of_states to matrix size rows * cols
-    # returning from vector size |states| to matrix size rows * cols
     U = np.zeros((rows, cols))
     # print("V: ", V)
+    # print("W: ", W)
     for row in range(rows):
         for col in range(cols):
             state = row * cols + col
@@ -114,8 +116,8 @@ def policy_evaluation(mdp, policy):
             state = (row, col)
             if state in mdp.terminal_states:
                 U[state[0]][state[1]] = float(mdp.get_reward(state))
-            if not valid_state(mdp,state):
-                U[state[0]][state[1]] = 0.25
+            if not valid_state(mdp, state):
+                U[state[0]][state[1]] = 0
     # gamma = mdp.gamma
     # # TODO: threshold isn't defined in the lectures, need to understand
     # theta = 10 ** (-4)
@@ -138,6 +140,7 @@ def policy_evaluation(mdp, policy):
     #         break
     # ========================
     # print("U: ", U)
+    # print("U ", U)
     return U
 
 
@@ -151,20 +154,48 @@ def policy_iteration(mdp, policy_init):
     rows, cols = mdp.num_row, mdp.num_col
     U = np.zeros((rows, cols))
     optimal_policy = policy_init
-    while True:
+    isChanged = True
+    count = 0
+    while isChanged and count < 10:
+        count += 1
         U = policy_evaluation(mdp, optimal_policy)
+        # mdp.print_policy(optimal_policy)
+        # print("Utility:")
+        # mdp.print_utility(U)
         isChanged = False
         for row in range(rows):
             for col in range(cols):
                 state = (row, col)
+
                 if state in mdp.terminal_states or not valid_state(mdp, state):
                     continue
-                if exists_better_policy(mdp, optimal_policy, U, state):
-                    optimal_policy[row][col] = get_best_action(mdp, state, mdp.actions, U)
+
+                # find the action with the best utility:
+                actions = list(mdp.transition_function.keys())
+                best_value = float("-inf")
+                best_action = optimal_policy[state[0]][state[1]]
+                for action in mdp.actions:
+                    action_utility = 0
+                    for outcome_action_index in range(len(mdp.actions)):
+                        prob_outcome_action = mdp.transition_function.get(action)[outcome_action_index]
+                        outcome_action = actions[outcome_action_index]
+                        new_state = mdp.step(state, outcome_action)
+                        # checking if we hit a wall
+                        if new_state != state:
+                            action_utility += prob_outcome_action * U[new_state]
+                    if action_utility > best_value:
+                        best_action = action
+                        best_value = action_utility
+                if best_action != optimal_policy[state[0]][state[1]]:
+                    optimal_policy[state[0]][state[1]] = best_action
                     isChanged = True
-        if not isChanged:
-            break
+
+                # if exists_better_policy(mdp, optimal_policy, U, state):
+                #     print(":)")
+                #     optimal_policy[row][col] = get_best_action(mdp, state, mdp.actions, U)
+                #     isChanged = True
     # ========================
+    # mdp.print_policy(optimal_policy)
     return optimal_policy
 
 
@@ -207,8 +238,11 @@ def get_action_expected_utility(mdp: MDP, state: Tuple[int, int], action: Action
         next_state = mdp.step(state, action_by_index)
 
         # Add to the action value, weighted by probability
+        # if state == (0, 0) or state == (2, 0):
+        #     print("P(", next_state, "|,", state, ",", action, ") =", probability, "U(", next_state, ") = ", U[next_state])
         action_value += probability * U[next_state]
-
+    # if state == (0, 0) or state == (2, 0):
+    #     print("state = ", state, "action = ", action, " action_value = ", action_value)
     return action_value
 
 
@@ -263,12 +297,41 @@ def exists_better_policy(mdp: MDP, policy, U, state: Tuple[int, int]) -> bool:
     # Given a mdp, a policy, a utility array and a state,
     # return true if there is a better policy to the given
     # state and False otherwise
+    if state in mdp.terminal_states or not valid_state(mdp, state):
+        return False
+
+    # find the action with the best utility:
+    actions = list(mdp.transition_function.keys())
+    best_value = float("-inf")
+    best_action = policy[state[0]][state[1]]
+    for action in mdp.actions:
+        action_utility = 0
+        for outcome_action_index in range(len(mdp.actions)):
+            prob_outcome_action = mdp.transition_function.get(action)[outcome_action_index]
+            outcome_action = actions[outcome_action_index]
+            new_state = mdp.step(state, outcome_action)
+            # checking if we hit a wall
+            if new_state != state:
+                action_utility += prob_outcome_action * U[new_state]
+        if action_utility > best_value:
+                best_action = action
+                best_value = action_utility
+    if best_action != policy[state[0]][state[1]]:
+        return True
+    return False
+
     best_action = get_best_action(mdp, state, mdp.actions, U)
     # if best_action is None:
         # print(state, ":(")
     best_value = get_action_expected_utility(mdp, state, best_action, U)
     policy_value = get_action_expected_utility(mdp, state, policy[state[0]][state[1]], U)
-    return best_value > policy_value
+    best_value = round(best_value, 5)
+    policy_value = round(policy_value, 5)
+    epsilon = 1e-10
+    if best_value > policy_value + epsilon:
+        print("state = ", state, "action = ", policy[state[0]][state[1]], ", policy_value = ", policy_value,
+              "best action = ",best_action, "best_value = ", best_value, )
+        return best_value > policy_value
 
 
 def valid_state(mdp: MDP, state: Tuple[int, int]) -> bool:
