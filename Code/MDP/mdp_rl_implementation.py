@@ -3,7 +3,6 @@ from simulator import Simulator
 from typing import Dict, List, Tuple
 import numpy as np
 
-
 def value_iteration(mdp, U_init, epsilon=10 ** (-3)):
     # Given the mdp, the initial utility of each state - U_init,
     #   and the upper limit - epsilon.
@@ -25,9 +24,8 @@ def value_iteration(mdp, U_init, epsilon=10 ** (-3)):
         # Update the utility of each state
         for row in range(rows):
             for col in range(cols):
-                if valid_state(mdp, (row, col)):
-                    U_current[row, col] = belman_calculation(mdp, (row, col), U_final)
-
+                U_current[row, col] = belman_calculation(mdp, (row, col), U_final)
+        
         # Update delta
         delta = max(np.max(np.abs(U_final - U_current), delta))
     # ========================
@@ -64,87 +62,60 @@ def policy_evaluation(mdp, policy):
     # ====== YOUR CODE: ======
     rows, cols = mdp.num_row, mdp.num_col
     num_of_states = rows * cols
+    
     # define gamma Reward vector and probability vector to find the Utility vector
     gamma = mdp.gamma
-    R = np.zeros(num_of_states)
-    for row in range(rows):
-        for col in range(cols):
-            state = state_num(mdp, row, col)
-            R[state] = float(mdp.get_reward((row, col))) if mdp.get_reward((row, col)) != "WALL" else 0
-    P = np.zeros((num_of_states, num_of_states))
+    R = get_reward_vector(mdp)
+    P = get_probabilities_matrix(mdp, policy)
     I = np.eye(num_of_states)
-    # print(I)
-    # print(policy)
-    # print(type(policy))
-    # calculate all the probabilities for P(s'|s,pi(a))
-    for state_row in range(rows):
-        for state_col in range(cols):
-            # print("row: ", state_row, "col: ", state_col)
-            state = state_num(mdp, state_row, state_col)
-            # print("row: ", state_row, " col: ", state_col)
-            action = policy[state_row][state_col]
-            # print(type(action))
-            if isinstance(action, str):
-                action = Action[action]
-            if action is None:
-                P[state, state] = 1
-                continue
-            transition_probs = mdp.transition_function[action]
-            for action_index, probability in enumerate(transition_probs):
-                action_by_index = str(list(Action)[action_index])
-                next_state_pos = mdp.step((state_row, state_col), action_by_index)
-                next_state = state_num(mdp, next_state_pos[0], next_state_pos[1])
-                P[next_state, state] += probability
 
     # solving the linear equation U = R - gamma * P * U => (I - gamma * P) * U = R [like Ax=b]
     V = np.zeros(num_of_states)
-    print("R: ", R)
-    # mdp.print_policy(policy)
-    print("P: ")
-    print(P)
-    print("gamma = ", gamma)
-    W = np.linalg.inv(I - gamma * P)
-    V = W.dot(R)
-    # V = np.linalg.solve(I - gamma * P, R)
+    V = np.linalg.solve(I - gamma * P, R)
+    
     # returning from vector size num_of_states to matrix size rows * cols
-    U = np.zeros((rows, cols))
-    # print("V: ", V)
-    # print("W: ", W)
-    for row in range(rows):
-        for col in range(cols):
-            state = state_num(mdp, row, col)
-            U[row][col] = V[state]
-
-    for row in range(rows):
-        for col in range(cols):
-            state = (row, col)
-            if state in mdp.terminal_states:
-                U[state[0]][state[1]] = float(mdp.get_reward(state))
-            if not valid_state(mdp, state):
-                U[state[0]][state[1]] = 0
-    # gamma = mdp.gamma
-    # # TODO: threshold isn't defined in the lectures, need to understand
-    # theta = 10 ** (-4)
-    # rows, cols = mdp.num_row, mdp.num_col
-    # U = np.zeros((rows, cols))
-    # # ensuring the Bellman equation for each state according to the existing U until delta < threshold
-    # while True:
-    #     delta = 0
-    #     for row in range(rows):
-    #         for col in range(cols):
-    #             temp = U[row, col]
-    #             action = policy[row, col]
-    #             reward = mdp.get_reward((row, col))
-    #             U[row, col] = reward + gamma * get_action_expected_utility(mdp, (row, col), action, U)
-    #             # U[row, col] = reward + gamma *
-    #             # sum(mdp.transition_function((next_row, next_col), (row, col), action) * U[next_row, next_col]
-    #             # for next_row in range(rows) for next_col in range(cols))
-    #             delta = max(delta, abs(temp - U[row, col]))
-    #     if delta < theta:
-    #         break
+    U = convert_V_to_U(mdp, V)
     # ========================
-    # print("U: ", U)
-    # print("U ", U)
+    return U
+
+
+# TODO: Delete this function if not used
+# TODO: threshold isn't defined in the lectures, need to understand
+def policy_evaluation_2_option(mdp, policy):
+    # Given the mdp, and a policy
+    # return: the utility U(s) of each state s
+    #
+
+    U = None
+    # ====== YOUR CODE: ======
+    gamma = mdp.gamma
+    theta = 10 ** (-4)
+    rows, cols = mdp.num_row, mdp.num_col
+    U = np.zeros((rows, cols))
+    
+    # Update terminal states utility
+    for state in mdp.terminal_states:
+        U[state[0], state[1]] = float(mdp.get_reward(state))
+    
+    # ensuring the Bellman equation for each state according to the existing U until delta < threshold
+    while True:
+        delta = 0
+        for row in range(rows):
+            for col in range(cols):
+                temp = U[row, col]
+                action = policy[row][col]
+                reward = mdp.get_reward((row, col))
+                if action is None or reward == "WALL":
+                    U[row, col] = 0 if reward == "WALL" else float(reward)
+                    continue
+                action_utility = get_action_expected_utility(mdp, (row, col), action, U)
+                # print("state = ", (row, col), "action = ", action, " action_utility = ", action_utility)
+                U[row, col] = float(reward) + gamma * action_utility
+                delta = max(delta, abs(temp - U[row, col]))
+
+        if delta < theta:
+            break
+    # ========================
     return U
 
 
@@ -159,49 +130,24 @@ def policy_iteration(mdp, policy_init):
     U = np.zeros((rows, cols))
     optimal_policy = policy_init
     isChanged = True
-    count = 0
+
     while isChanged:
-        count += 1
-        print("Policy and Utility:")
-        mdp.print_policy(optimal_policy)
         U = policy_evaluation(mdp, optimal_policy)
-        mdp.print_utility(U)
         isChanged = False
         for row in range(rows):
             for col in range(cols):
                 state = (row, col)
 
+                # Check if the state is a terminal state or a wall
                 if state in mdp.terminal_states or not valid_state(mdp, state):
                     continue
 
-                # find the action with the best utility:
-                actions = list(mdp.transition_function.keys())
-                best_value = float("-inf")
-                best_action = optimal_policy[state[0]][state[1]]
-                for action in mdp.actions:
-                    action_utility = 0
-                    for outcome_action_index in range(len(mdp.actions)):
-                        prob_outcome_action = mdp.transition_function.get(action)[outcome_action_index]
-                        outcome_action = actions[outcome_action_index]
-                        new_state = mdp.step(state, outcome_action)
-                        # checking if we hit a wall
-                        if new_state != state:
-                            action_utility += prob_outcome_action * U[new_state]
-                    if action_utility > best_value:
-                        best_action = action
-                        best_value = action_utility
+                # Find the action with the best utility:
+                best_action = get_best_action(mdp, state, mdp.actions, U)
                 if best_action != optimal_policy[state[0]][state[1]]:
-                    print("state = ", state, "action = ", optimal_policy[state[0]][state[1]], ", action_utility = ",
-                          action_utility, "best action = ", best_action, "best_value = ", best_value)
                     optimal_policy[state[0]][state[1]] = best_action
                     isChanged = True
-
-                # if exists_better_policy(mdp, optimal_policy, U, state):
-                #     print(":)")
-                #     optimal_policy[row][col] = get_best_action(mdp, state, mdp.actions, U)
-                #     isChanged = True
     # ========================
-    # mdp.print_policy(optimal_policy)
     return optimal_policy
 
 
@@ -232,8 +178,11 @@ def get_action_expected_utility(mdp: MDP, state: Tuple[int, int], action: Action
     # Given an MDP, a state, an action, and the utility of each state - U
     # return the expected utility of the given action in the given state
     #
+    
+    # Check if the action is a string and convert it to an Action
     if isinstance(action, str):
         action = Action[action]
+        
     # Get the transition probabilities for the action
     transition_probs = mdp.transition_function[action]
     action_value = 0
@@ -244,11 +193,8 @@ def get_action_expected_utility(mdp: MDP, state: Tuple[int, int], action: Action
         next_state = mdp.step(state, action_by_index)
 
         # Add to the action value, weighted by probability
-        # if state == (0, 0) or state == (2, 0):
-        #     print("P(", next_state, "|,", state, ",", action, ") =", probability, "U(", next_state, ") = ", U[next_state])
         action_value += probability * U[next_state]
-    # if state == (0, 0) or state == (2, 0):
-    #     print("state = ", state, "action = ", action, " action_value = ", action_value)
+
     return action_value
 
 
@@ -257,6 +203,9 @@ def belman_calculation(mdp: MDP, state: Tuple[int, int], U):
     # return the Bellman equation calculation for the given state and action
     #
 
+    if not valid_state(mdp, state):
+        return 0
+    
     # Get the reward of the current state
     reward = float(mdp.get_reward(state))
 
@@ -299,47 +248,6 @@ def get_best_action(mdp: MDP, state: Tuple[int, int], action_list: List[Tuple[Ac
     return best_action
 
 
-def exists_better_policy(mdp: MDP, policy, U, state: Tuple[int, int]) -> bool:
-    # Given a mdp, a policy, a utility array and a state,
-    # return true if there is a better policy to the given
-    # state and False otherwise
-    if state in mdp.terminal_states or not valid_state(mdp, state):
-        return False
-
-    # find the action with the best utility:
-    # actions = list(mdp.transition_function.keys())
-    # best_value = float("-inf")
-    # best_action = policy[state[0]][state[1]]
-    # for action in mdp.actions:
-    #     action_utility = 0
-    #     for outcome_action_index in range(len(mdp.actions)):
-    #         prob_outcome_action = mdp.transition_function.get(action)[outcome_action_index]
-    #         outcome_action = actions[outcome_action_index]
-    #         new_state = mdp.step(state, outcome_action)
-    #         # checking if we hit a wall
-    #         if new_state != state:
-    #             action_utility += prob_outcome_action * U[new_state]
-    #     if action_utility > best_value:
-    #             best_action = action
-    #             best_value = action_utility
-    # if best_action != policy[state[0]][state[1]]:
-    #     return True
-    # return False
-
-    best_action = get_best_action(mdp, state, mdp.actions, U)
-    # if best_action is None:
-        # print(state, ":(")
-    best_value = get_action_expected_utility(mdp, state, best_action, U)
-    policy_value = get_action_expected_utility(mdp, state, policy[state[0]][state[1]], U)
-    best_value = round(best_value, 5)
-    policy_value = round(policy_value, 5)
-    epsilon = 1e-10
-    if best_value > policy_value + epsilon:
-        print("state = ", state, "action = ", policy[state[0]][state[1]], ", policy_value = ", policy_value,
-              "best action = ",best_action, "best_value = ", best_value, )
-        return best_value > policy_value
-
-
 def valid_state(mdp: MDP, state: Tuple[int, int]) -> bool:
     return not mdp.get_reward(state) == "WALL"
 
@@ -362,4 +270,79 @@ def get_state_probabilty(mdp: MDP, state: Tuple[int, int], action: Action, next_
 
 
 def state_num(mdp: MDP, row: int, col: int) -> int:
+    # Given an MDP, a row, and a column
+    # return the state number of the given row and column
+    #
     return row * mdp.num_col + col
+
+
+def get_probabilities_matrix(mdp: MDP, policy) -> np.array:
+    # Calculate the probability of each state to reach the next state
+    # given the action
+    # P(s'|s,pi(a)) for all s, s', a
+    #
+    rows, cols = mdp.num_row, mdp.num_col
+    num_of_states = rows * cols
+    
+    P = np.zeros((num_of_states, num_of_states))
+    
+    # calculate all the probabilities for P(s'|s,pi(a))
+    for state_row in range(rows):
+        for state_col in range(cols):
+            state = state_num(mdp, state_row, state_col)
+            action = policy[state_row][state_col]
+            if isinstance(action, str):
+                action = Action[action]
+            if action is None:
+                continue
+            transition_probs = mdp.transition_function[action]
+            for action_index, probability in enumerate(transition_probs):
+                action_by_index = str(list(Action)[action_index])
+                next_state_pos = mdp.step((state_row, state_col), action_by_index)
+                next_state = state_num(mdp, next_state_pos[0], next_state_pos[1])
+                P[state, next_state] += probability
+                
+    return P
+
+
+def get_reward_vector(mdp: MDP) -> np.array:
+    # Calculate the reward vector
+    # R(s) for all s
+    #
+    
+    rows, cols = mdp.num_row, mdp.num_col
+    num_of_states = rows * cols
+    
+    # calculate all the rewards for R(s)
+    R = np.zeros(num_of_states)
+    for row in range(rows):
+        for col in range(cols):
+            state = state_num(mdp, row, col)
+            R[state] = float(mdp.get_reward((row, col))) if mdp.get_reward((row, col)) != "WALL" else 0
+    
+    return R
+
+
+def convert_V_to_U(mdp: MDP, V: np.array):
+    # Convert the utility vector to a utility matrix
+    # U(s) for all s
+    #
+    rows, cols = mdp.num_row, mdp.num_col
+    U = np.zeros((rows, cols))
+    
+    # convert the utility vector to a utility matrix
+    for row in range(rows):
+        for col in range(cols):
+            state = state_num(mdp, row, col)
+            U[row][col] = V[state]
+            
+    # Update the utility matrix with terminal states and walls
+    for row in range(rows):
+        for col in range(cols):
+            state = (row, col)
+            if state in mdp.terminal_states:
+                U[state[0]][state[1]] = float(mdp.get_reward(state))
+            if not valid_state(mdp, state):
+                U[state[0]][state[1]] = 0
+    
+    return U
