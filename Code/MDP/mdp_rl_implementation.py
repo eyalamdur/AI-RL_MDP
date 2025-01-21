@@ -161,7 +161,7 @@ def policy_iteration(mdp, policy_init):
         U = policy_evaluation(mdp, optimal_policy)
         # mdp.print_policy(optimal_policy)
         # print("Utility:")
-        # mdp.print_utility(U)
+        mdp.print_utility(U)
         isChanged = False
         for row in range(rows):
             for col in range(cols):
