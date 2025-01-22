@@ -30,7 +30,6 @@ def example_driver():
     print("\nFinal utility:")
     U_new = value_iteration(mdp, U)
     mdp.print_utility(U_new)
-    
     print("\nFinal policy:")
     policy = get_policy(mdp, U_new)
     mdp.print_policy(policy)
@@ -61,17 +60,26 @@ def mc_example_driver():
               ['UP', None, 'UP', None],
               ['UP', 'UP', 'UP', 'UP']]
     sim = Simulator()
-    reward_matrix, transition_probabilities = mc_algorithm(sim=sim, num_episodes=10, gamma=0.9, policy=policy)
-
-    print("Reward Matrix:")
+    
+    print(f"\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+    print(f"@@@@@@    Reward matrix after 10 episodes   @@@@@@@")
+    reward_matrix = mc_algorithm(sim=sim, num_episodes=10, gamma=0.9, policy=policy)
     print(reward_matrix)
+    print(f"@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+    print(f"\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+    print(f"@@@@@    Reward matrix after 100 episodes   @@@@@@")
+    reward_matrix = mc_algorithm(sim=sim, num_episodes=100, gamma=0.9, policy=policy)
+    print(reward_matrix)
+    print(f"@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+    print(f"\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+    print(f"@@@@@    Reward matrix after 1000 episodes   @@@@@@")
+    reward_matrix = mc_algorithm(sim=sim, num_episodes=1000, gamma=0.9, policy=policy)
+    print(reward_matrix)
+    print(f"@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
 
-    formatted_transitions = format_transition_function(transition_probabilities)
-    print("Transition Probabilities:")
-    print_transition_function(formatted_transitions)
 
 
 if __name__ == '__main__':
     # run our example
     example_driver()
-    #mc_example_driver()
+    mc_example_driver()
