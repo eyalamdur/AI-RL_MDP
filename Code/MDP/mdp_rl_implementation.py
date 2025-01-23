@@ -79,46 +79,6 @@ def policy_evaluation(mdp, policy):
     return U
 
 
-# TODO: Delete this function if not used
-# TODO: threshold isn't defined in the lectures, need to understand
-def policy_evaluation_2_option(mdp, policy):
-    # Given the mdp, and a policy
-    # return: the utility U(s) of each state s
-    #
-
-    U = None
-    # ====== YOUR CODE: ======
-    gamma = mdp.gamma
-    theta = 10 ** (-4)
-    rows, cols = mdp.num_row, mdp.num_col
-    U = np.zeros((rows, cols))
-    
-    # Update terminal states utility
-    for state in mdp.terminal_states:
-        U[state[0], state[1]] = float(mdp.get_reward(state))
-    
-    # ensuring the Bellman equation for each state according to the existing U until delta < threshold
-    while True:
-        delta = 0
-        for row in range(rows):
-            for col in range(cols):
-                temp = U[row, col]
-                action = policy[row][col]
-                reward = mdp.get_reward((row, col))
-                if action is None or reward == "WALL":
-                    U[row, col] = 0 if reward == "WALL" else float(reward)
-                    continue
-                action_utility = get_action_expected_utility(mdp, (row, col), action, U)
-                # print("state = ", (row, col), "action = ", action, " action_utility = ", action_utility)
-                U[row, col] = float(reward) + gamma * action_utility
-                delta = max(delta, abs(temp - U[row, col]))
-
-        if delta < theta:
-            break
-    # ========================
-    return U
-
-
 def policy_iteration(mdp, policy_init):
     # Given the mdp, and the initial policy - policy_init
     # run the policy iteration algorithm
