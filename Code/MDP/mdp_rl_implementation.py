@@ -167,9 +167,33 @@ def mc_algorithm(
     V = None
 
     # ====== YOUR CODE: ======
+    # Initialize the value function V and returns dictionary
+    V = np.zeros((num_rows, num_cols))
+    returns = { (row, col): [] for row in range(num_rows) for col in range(num_cols) }
 
+    # Iterate through the number of episodes
+    for _, episode_gen in enumerate(sim.replay(num_episodes)):
+        G = 0
+        steps = []
+
+        # Collect steps in the episode
+        for step in episode_gen:
+            steps.append(step)
+        
+        # Calculate the return for each state in the episode in reverse order
+        visited_states = set()
+        for i in range(len(steps) - 1, -1, -1):
+            state, reward, _, _ = steps[i]
+            G = gamma * G + reward
+            
+            # First visit check
+            if state not in visited_states:
+                visited_states.add(state)
+                returns[state].append(G)
+                V[state[0], state[1]] = np.mean(returns[state])
+    
+    V = np.where(V == 0, None, V)
     # =========================
-
     return V
 
 
