@@ -191,7 +191,8 @@ def mc_algorithm(
                 visited_states.add(state)
                 returns[state].append(G)
                 V[state[0], state[1]] = np.mean(returns[state])
-                  
+    
+    V = np.where(V == 0, None, V)
     # =========================
     return V
 
