@@ -15,7 +15,7 @@ from typing import List, Tuple
 ========================================================================
 """
 
-ID = 123456789  # TODO: change it to your personal ID
+ID = 209351626 
 random_gen = RandomState(seed=ID)
 print_formatted_values = False
 
@@ -39,7 +39,8 @@ def accuracy(y: np.array, y_pred: np.array)-> float:
     assert y.ndim == 1
     accuracy_val = None
     # ====== YOUR CODE: ======
-    raise NotImplementedError
+    N = y.shape[0]
+    accuracy_val = np.sum(y == y_pred) / N
     # ========================
 
     return accuracy_val
@@ -59,9 +60,15 @@ def l2_dist(x1: np.array, x2: np.array):
     #  Note: Use only basic numpy operations, no external code.
 
     dists = None
-
     # ====== YOUR CODE: ======
-    raise NotImplementedError
+    N1 = x1.shape[0]
+    N2 = x2.shape[0]
+    dists = np.zeros((N1, N2))
+    
+    for i in range(N1):
+        for j in range(N2):
+            dists[i, j] = euclidean_distance(x1[i], x2[j])
+    
     # ========================
 
     return dists
@@ -161,3 +168,14 @@ def get_dataset_split(train_set: np.array, test_set: np.array, target_attribute:
     y_test = np.array(test_set[target_attribute].copy())
 
     return x_train, y_train, x_test, y_test
+
+# ---------------------- Helper functions for ID3 ----------------------#
+def euclidean_distance(x1: np.array, x2: np.array)-> float:
+    """
+    Calculates the L2 (euclidean) distance between two samples.
+    :param x1: First sample vector of shape (D)
+    :param x2: Second sample vector of shape (D)
+    :return: The distance between the two samples.
+    """
+    D = len(x1)
+    return np.sqrt(sum((x1[i]-x2[i])**2 for i in range(D)))
